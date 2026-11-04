@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; img-src 'self' file: pbfile: data: blob:; style-src 'self' file: 'unsafe-inline'; script-src 'self' file:; connect-src 'self' file:">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photobook Studio</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">
+      <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/></svg></div>
+      <div>
+        <div id="projName" class="pname">Photobook Studio</div>
+        <div id="projMeta" class="pmeta"></div>
+      </div>
+    </div>
+    <div class="grp" id="grpFile"></div>
+    <div class="grp" id="grpUndo"></div>
+    <nav class="tabs" id="modeTabs" aria-label="Mode"></nav>
+    <div class="grp right" id="grpMain"></div>
+  </header>
+  <div id="workspace">
+    <aside id="photos" aria-label="Photos"></aside>
+    <main id="center">
+      <div id="toolbar"></div>
+      <div id="stageWrap"><div id="stage"></div></div>
+      <div id="filmstrip" aria-label="Spreads"></div>
+    </main>
+    <aside id="inspector" aria-label="Inspector"></aside>
+  </div>
+  <div id="preview" hidden></div>
+  <div id="modalRoot"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="core.js"></script>
+<script src="layout.js"></script>
+<script src="exporter.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

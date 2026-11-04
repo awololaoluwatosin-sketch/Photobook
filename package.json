@@ -1,0 +1,71 @@
+{
+  "name": "photobook-studio",
+  "productName": "Photobook Studio",
+  "version": "1.0.0",
+  "description": "Design photo albums and photobooks: import, auto-design, edit spreads, export print-ready files.",
+  "main": "main.js",
+  "author": "Photobook Studio",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "dependencies": {
+    "exifr": "^7.1.3",
+    "font-list": "^2.1.0"
+  },
+  "devDependencies": {
+    "electron": "^45.2.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.photobookstudio.app",
+    "productName": "Photobook Studio",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "license.js",
+      "license-client.js",
+      "license-public.json",
+      "app-config.json",
+      "src/**/*",
+      "package.json"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "pbook",
+        "name": "Photobook project",
+        "role": "Editor"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.photography"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Graphics"
+    }
+  }
+}

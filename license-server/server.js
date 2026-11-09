@@ -5,7 +5,8 @@
    App        POST /api/activate       a computer asks to use a license key  -> signed, expiring token
               POST /api/validate       the app re-checks (refreshes the token, learns about cancellations)
               POST /api/deactivate     frees one computer slot
-   You        /admin/*                 list / revoke / restore / reset computers / change limit  (Bearer ADMIN_TOKEN)
+   You        /dashboard               web page to see licenses and computers, cancel, reset, issue keys (asks for ADMIN_TOKEN)
+              /admin/*                 the same actions as an API: list / revoke / restore / reset / limit / issue / removedevice (Bearer ADMIN_TOKEN)
 
    Each license may be active on MAX_DEVICES computers. Cancelled (revoked) licenses stop working the next time
    the app checks in, and in any case when its token expires (TOKEN_DAYS, default 30). */
@@ -90,7 +91,7 @@ function createApp(env, deps) {
   }
 
   // ----- admin endpoints -----
-  function admin(method, url, body) {
+  async function admin(method, url, body) {
     if (method === 'GET' && url.pathname === '/admin/licenses') {
       const q = url.searchParams.get('q');
       const list = q ? find(q) : Object.keys(data.licenses).map((k) => data.licenses[k]);
@@ -98,6 +99,23 @@ function createApp(env, deps) {
     }
     if (method !== 'POST') return { status: 404, json: { error: 'not_found' } };
     const action = url.pathname.replace('/admin/', '');
+    if (action === 'issue') { // make a key by hand (bank transfer, WhatsApp sales) and optionally email it
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { status: 400, json: { error: 'bad_email' } };
+      const id = 'manual-' + crypto.randomBytes(5).toString('hex');
+      const key = L.makeKey({ email, id, iat: Date.now(), plan: 'pro' }, priv());
+      record(id, email); save();
+      let emailError = '';
+      if (body.send) { try { await (deps.sendEmail || sendEmail)(email, key, env.PRODUCT_NAME || 'Photobook Studio'); } catch (e) { emailError = String(e.message || e); } }
+      return { status: 200, json: { ok: true, key, id, email, emailed: !!body.send && !emailError, emailError } };
+    }
+    if (action === 'removedevice') { // free one computer of one license
+      const rec = data.licenses[String(body.id || '')];
+      if (!rec) return { status: 404, json: { error: 'no_match' } };
+      Object.keys(rec.devices).forEach((d) => { if (devRef(d) === body.ref) delete rec.devices[d]; });
+      save();
+      return { status: 200, json: { ok: true, licenses: [summary(rec)] } };
+    }
     let targets = find(body.q);
     if (!targets.length && action === 'revoke' && body.q && String(body.q).indexOf('@') < 0) targets = [record(String(body.q), '')]; // cancel before first use
     if (!targets.length) return { status: 404, json: { error: 'no_match' } };
@@ -195,6 +213,14 @@ function createApp(env, deps) {
       const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
       const url = new URL(req.url, 'http://x');
       if (req.method === 'GET' && url.pathname === '/health') { res.end('ok'); return; }
+      if (req.method === 'GET' && (url.pathname === '/dashboard' || url.pathname === '/dashboard.js')) { // static page; all data still needs the admin token
+        const isJs = url.pathname.endsWith('.js');
+        res.setHeader('Content-Type', isJs ? 'text/javascript; charset=utf-8' : 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+        res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('Referrer-Policy', 'no-referrer');
+        res.end(fs.readFileSync(path.join(__dirname, isJs ? 'dashboard.js' : 'dashboard.html'))); return;
+      }
 
       if (req.method === 'POST' && url.pathname === '/paystack-webhook') {
         const r = await handlePaystack(await readBody(req), req.headers['x-paystack-signature']);
@@ -212,7 +238,7 @@ function createApp(env, deps) {
         if (!authed(req)) return send(res, 401, { error: 'unauthorized' });
         let body = {};
         if (req.method === 'POST') { try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); } catch (e) { return send(res, 400, { error: 'bad_json' }); } }
-        const r = admin(req.method, url, body);
+        const r = await admin(req.method, url, body);
         return send(res, r.status, r.json);
       }
       send(res, 404, { error: 'not_found' });
